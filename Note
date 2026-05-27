@@ -1,0 +1,160 @@
+No problem! Since we've successfully troubleshooted and locked down this rock-solid "No-GUI Autologin Fullscreen Advertising Machine," here is the compiled, definitive, and error-free **Final Guide**.
+
+This guide is fully tailored for a **Raspberry Pi OS Lite (No-GUI/Debian Bookworm) system with the username `user**`.
+
+---
+
+# 📺 Raspberry Pi CLI Ad-Player Ultimate Guide (No-GUI)
+
+This configuration modifies the system's low-level services to achieve a professional ad-player setup. It boots **directly into your fullscreen image within seconds**—no desktop environment, no mouse cursor, no password prompts, no screen-sleeping, and entirely zero-maintenance.
+
+## 🛠️ Prerequisites
+
+1. Prepare your advertising image, name it `ads.jpg`.
+2. Copy/upload this image to your Raspberry Pi under the `/home/user/` directory.
+* *(You can run `ls /home/user/ads.jpg` in the terminal to verify the image is in the right place).*
+
+
+
+---
+
+## 🚀 Step-by-Step Implementation
+
+### Step 1: Install the CLI Image Viewer `fbi`
+
+Run the following commands in your terminal to install `fbi` (FrameBuffer ImageViewer), which draws pixels directly onto the screen without needing a heavy desktop UI:
+
+```bash
+sudo apt update
+sudo apt install fbi -y
+
+```
+
+### Step 2: Grant Permanent Password-Free `sudo` to `user`
+
+To prevent the boot script from getting stuck at a `[sudo] password for user:` prompt when calling the image viewer, we must configure passwordless sudo privileges:
+
+1. Open the sudoers configuration file:
+```bash
+
+```
+
+
+
+sudo visudo
+
+```
+2. Use the **down arrow key** to scroll to the **very bottom** of the file. Add this exact line on a new line at the end:
+   ```text
+user ALL=(ALL) NOPASSWD: ALL
+
+```
+
+3. Save and exit: Press `Ctrl + O` -> Press `Enter` to confirm -> Press `Ctrl + X` to exit the editor.
+
+### Step 3: Hard-Lock "Console Autologin" via Systemd
+
+Force the Raspberry Pi to bypass the username/password login prompt on `tty1` (the main monitor):
+
+1. Run this single, combined command to create the low-level autologin override configuration:
+```bash
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d/ && echo -e "[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin user --noclear %I \$TERM" | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+```
+
+
+
+```
+2. Reload systemd and enable the modified service:
+   ```bash
+sudo systemctl daemon-reload
+sudo systemctl enable getty@tty1.service
+
+```
+
+### Step 4: Configure Auto-Display and Anti-Screen Blanking on Boot
+
+We will use the user's `.bashrc` script to automatically trigger the image display and disable power-saving features the exact millisecond the system logs in:
+
+1. Open the `.bashrc` file:
+```bash
+
+```
+
+
+
+nano /home/user/.bashrc
+
+```
+2. Scroll to the **very bottom** of the file and paste the following block of code:
+   ```bash
+# Ensure this only triggers on the local physical screen (tty1), preventing SSH glitches
+if [ "$(tty)" = "/dev/tty1" ]; then
+    # Completely disable screen dimming, screen savers, and power-downs
+    setterm -blank 0 -powersave off -powerdown 0
+    
+    # Use fbi to force fullscreen (-T 1), auto-zoom (-a), hide info text (-noverbose) and display the image
+    sudo fbi -d /dev/fb0 -T 1 -noverbose -a /home/user/ads.jpg
+fi
+
+```
+
+3. Save and exit: Press `Ctrl + O` -> Press `Enter` to confirm -> Press `Ctrl + X` to exit.
+
+### Step 5: Clean up the Boot Splash (Optional)
+
+To hide the kernel wall-of-text printouts on boot as much as possible for a cleaner startup:
+
+1. Open the boot command-line configuration file:
+```bash
+sudo nano /boot/firmware/cmdline.txt
+
+```
+
+
+
+```
+   *Note: On older OS versions, if this file is missing, try `sudo nano /boot/cmdline.txt`.*
+2. At the **very end of that single long line of code** (do **NOT** start a new line, just add a space), append the following parameters:
+   ```text
+   quiet splash logo.nologo vt.global_cursor_default=0
+
+```
+
+3. Save and exit (`Ctrl + O` -> `Enter` -> `Ctrl + X`).
+
+---
+
+## 🏁 Enjoy Your Ad-Player!
+
+Unplug your mouse, leave only the monitor and keyboard connected, and type the reboot command:
+
+```bash
+sudo reboot
+
+```
+
+**The Final Result:** Your Raspberry Pi will boot up cleanly with minimal scrolling text, skip the login prompt entirely, require zero passwords, and within seconds, your `ads.jpg` will instantly snap to full-screen. Your standalone ad-player is complete!
+
+---
+
+## 💡 Quick Maintenance Tips
+
+* **How do I close the image and get back to the command line?**
+Connect a keyboard to the Pi and press the `Q` key or the `Esc` key. The image will close, revealing your standard `user@display1:~ $` prompt.
+* **How do I change the advertisement image?**
+Just quit the image viewer, replace the old file at `/home/user/ads.jpg` with your new image, and reboot.
+* **What if I want a multi-image slideshow loop instead of a single picture?**
+Create a folder named `images` under `/home/user/` and drop multiple pictures inside it. Then, open your `/home/user/.bashrc` again, scroll to the bottom, and change the `fbi` command line to:
+```bash
+
+```
+
+
+
+sudo fbi -d /dev/fb0 -T 1 -noverbose -a -t 5 /home/user/images/*
+
+```
+  *(Where `-t 5` instructs the player to automatically cycle to the next image every 5 seconds).*
+
+```
