@@ -1,0 +1,155 @@
+
+
+This guide is formatted specifically for **Raspberry Pi OS Lite (No-GUI / Debian Bookworm) with the username `user**`.
+
+---
+
+# 📺 Raspberry Pi CLI Slideshow Ad-Player Ultimate Guide (No-GUI)
+
+This configuration modifies the system's low-level services to achieve a professional slideshow ad-player setup. It boots **directly into a fullscreen, multi-image slideshow loop within seconds**—completely bypassing desktop environments, mouse cursors, login prompts, and screen-sleeping issues.
+
+## 🛠️ Prerequisites
+
+1. Prepare your advertising images (supports `.jpg`, `.jpeg`, `.png`, etc.).
+2. For the best visual result without black bars, crop or resize your images to match your monitor's native resolution (e.g., `1920x1080` for a standard Full HD display).
+
+---
+
+## 🚀 Step-by-Step Implementation
+
+### Step 1: Create the Images Folder
+
+We need to set up a dedicated directory where your slideshow photos will live:
+
+1. Run this command in your terminal to create an `images` folder:
+```bash
+mkdir -p /home/user/images
+
+```
+
+
+2. **Transfer your images:** Connect to your Raspberry Pi using an SFTP client like **FileZilla** on your computer (Host: *Your Pi's IP*, Port: `22`, Username: `user`, Password: *Your password*). Drag and drop all your ad images directly into the `/home/user/images/` directory.
+
+### Step 2: Install the CLI Image Viewer `fbi`
+
+Run the following command to install `fbi` (FrameBuffer ImageViewer), a tool that renders image pixels directly to the screen framebuffer and natively supports automatic slideshow cycling:
+
+```bash
+sudo apt update
+sudo apt install fbi -y
+
+```
+
+### Step 3: Grant Permanent Password-Free `sudo` to `user`
+
+To prevent the boot script from getting stuck at a `[sudo] password for user:` prompt when initializing the slideshow, we must allow passwordless sudo access for our user account:
+
+1. Open the secure sudoers configuration file:
+```bash
+sudo visudo
+
+```
+
+
+2. Use the **down arrow key** to scroll to the **very bottom** of the file. Add this exact line on a new line at the end:
+```text
+user ALL=(ALL) NOPASSWD: ALL
+
+```
+
+
+3. Save and exit: Press `Ctrl + O` ➔ Press `Enter` to confirm ➔ Press `Ctrl + X` to exit the editor.
+
+### Step 4: Enforce Systemd Console Autologin
+
+Force the Raspberry Pi to bypass the username/password terminal prompt on `tty1` (the main monitor):
+
+1. Run this single, combined command to inject the low-level autologin parameters:
+```bash
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d/ && echo -e "[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin user --noclear %I \$TERM" | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+```
+
+
+2. Reload systemd and enable the modified service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable getty@tty1.service
+
+```
+
+
+
+### Step 5: Configure Automatic Slideshow Loop & Anti-Screen Blanking
+
+We harness the user's `.bashrc` file to kill power-saving triggers and spawn our slideshow sequence the precise millisecond the local terminal auto-login phase fires:
+
+1. Open the `.bashrc` file:
+```bash
+nano /home/user/.bashrc
+
+```
+
+
+2. Scroll to the **absolute bottom** of the file and paste this block of code:
+```bash
+# Ensure this only triggers on the local physical screen (tty1), preventing SSH glitches
+if [ "$(tty)" = "/dev/tty1" ]; then
+    # Completely disable terminal blanking, screen savers, and panel power-downs
+    setterm -blank 0 -powersave off -powerdown 0
+
+    # Launch fbi: force fullscreen (-T 1), auto-zoom (-a), hide software UI (-noverbose)
+    # -t 5 dictates the transition interval in seconds (change 5 to your preferred timing)
+    # /home/user/images/* target loops all assets located inside that folder alphabetically
+    sudo fbi -d /dev/fb0 -T 1 -noverbose -a -t 5 /home/user/images/*
+fi
+
+```
+
+
+3. Save and exit: Press `Ctrl + O` ➔ Press `Enter` to confirm ➔ Press `Ctrl + X` to exit.
+
+### Step 6: Clean up the Boot Splash (Optional)
+
+To hide standard kernel log prints and diagnostic system messages during startup for a clean, commercial look:
+
+1. Open the boot loader command-line configuration file:
+```bash
+sudo nano /boot/firmware/cmdline.txt
+
+```
+
+
+*Note: On older OS versions, if this file path is missing, try `sudo nano /boot/cmdline.txt` instead.*
+2. At the **very end of that single long line of code** (do **NOT** start a new line, just use a single space separator), append the following parameters:
+```text
+quiet splash logo.nologo vt.global_cursor_default=0
+
+```
+
+
+3. Save and exit (`Ctrl + O` ➔ `Enter` ➔ `Ctrl + X`).
+
+---
+
+## 🏁 Deployment Test
+
+Unplug your mouse and all temporary configuration peripherals. Leave only the monitor and a keyboard connected, then run the reboot command:
+
+```bash
+sudo reboot
+
+```
+
+**The Final Result:** Your Raspberry Pi will boot up cleanly with minimal scrolling text, skip the password login prompt entirely, and within seconds, your display will snap into a 100% full-screen slideshow presentation. It will seamlessly cycle through all images in your folder every 5 seconds infinitely!
+
+---
+
+## 💡 Slideshow Maintenance Tips
+
+* **How do I adjust the image rotation speed (staying time)?**
+Open your `/home/user/.bashrc` file, go to the bottom, and modify the `-t 5` flag in the `fbi` command. For example, `-t 10` means each image stays for 10 seconds, while `-t 30` sets it to half a minute.
+* **How do I update, add, or delete advertising images later?**
+You can connect to the Pi via SSH or FileZilla anytime while the machine is running and drop new photos into or delete old ones from `/home/user/images/`. Once done, simply run `sudo reboot` to apply changes.
+* **How do I exit the loop to access the command line locally?**
+Connect a physical keyboard to the Pi and tap the **`Q` key** or the **`Esc` key**. The `fbi` loop instance will terminate safely, dropping you right back to your regular `user@display1:~ $` prompt.
