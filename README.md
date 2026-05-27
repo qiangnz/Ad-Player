@@ -1,11 +1,5 @@
 # Ad-Player
 
-这份为你精心整理的 **GitHub README 格式文档**。你可以直接把它复制到你 GitHub 仓库的 `README.md` 文件中。
-
-它采用了标准的 Markdown 语法，包含了优雅的标题层级、代码块高亮以及结构化的警告提示（Admonitions），非常适合作为开源项目或个人笔记进行分享。
-
----
-
 ```markdown
 # 📺 Raspberry Pi CLI Ad-Player (No-GUI Ultimate Guide)
 
